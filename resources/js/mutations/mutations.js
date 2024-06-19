@@ -48,11 +48,23 @@ export default {
     MY_BALANCE_RUB:(state, data)=>{
         state.my_balance_rub = data
     },
+    MY_CREDIT_BALANCE_RUB:(state, data)=>{
+        state.my_credit_balance_rub = data
+    },
     MY_BALANCE_USDT:(state, data)=>{
         state.my_balance_usdt = data
     },
     MY_WITHDRAWALS_SUM:(state, data)=>{
         state.my_withdrawals_sum = data
+    },
+    WITHDRAWAL_PAYMENTS:(state, data)=>{
+        state.withdrawal_payments = data
+    },
+    DISPUTES:(state, data)=>{
+        state.disputes = data
+    },
+    PAGINATION:(state, data)=>{
+        state.pagination = data
     },
 
 }

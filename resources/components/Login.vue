@@ -1,16 +1,12 @@
 <template>
     <v-container style="height: 100dvh;">
-        <v-row align="center" class="h-100"
-        >
-<!--            <v-col-->
-<!--                class="h-100 d-lg-flex d-none">-->
-<!--                <v-sheet class="bg-login d-flex align-center pa-4 pa-lg-12 rounded-lg w-100 h-100" color="primary">-->
-<!--                    <v-img-->
-<!--                        style="height: 64px; width: 273px;"-->
-<!--                        src="/assets/img/logo.png"-->
-<!--                    />-->
-<!--                </v-sheet>-->
-<!--            </v-col>-->
+        <v-row class="flex-column align-center">
+            <v-col class="d-flex flex-column align-center">
+                <v-img
+                    height="64" width="64"
+                    src="/assets/img/logo.svg"
+                />
+            </v-col>
             <v-col
                 class="v-col-md-9 v-col-sm-12 v-col-lg-9"
             >
@@ -19,10 +15,6 @@
                     max-width="450"
                     color="transparent"
                 >
-                    <v-img
-                        style="height: 64px; width: 273px;"
-                        src="/assets/img/logo.png"
-                    />
                     <v-sheet
                         class="mt-2 mb-10"
                         color="transparent"
@@ -128,7 +120,11 @@ export default {
 </script>
 
 <style scoped>
-.bg-login {
-    background: url("/assets/img/bg-stamp.png") center center;
+.logo-text {
+    color: white;
+    font-size: 36px;
+    font-family: "Mont", sans-serif;
+    font-weight: 900;
+    line-height: 2;
 }
 </style>

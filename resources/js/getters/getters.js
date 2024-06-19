@@ -29,14 +29,23 @@ export default {
     GET_MY_BALANCE_RUB(state) {
         return state.my_balance_rub
     },
+    GET_MY_CREDIT_BALANCE_RUB(state) {
+        return state.my_credit_balance_rub
+    },
     GET_MY_BALANCE_USDT(state) {
         return state.my_balance_usdt
     },
     GET_MY_WITHDRAWALS_SUM(state) {
         return state.my_withdrawwals_sum
     },
-    GET_MY_CREDIT_BALANCE_RUB(state) {
-        return state.my_credit_balance_rub
+    GET_WITHDRAWAL_PAYMENTS(state){
+        return state.withdrawal_payments
+    },
+    GET_PAGINATION(state) {
+        return state.pagination
+    },
+    GET_DISPUTES(state) {
+        return state.disputes
     },
     user: state => state.user
 }

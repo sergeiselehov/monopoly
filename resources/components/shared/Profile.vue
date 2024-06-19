@@ -73,7 +73,6 @@ export default {
                 },
             ],
             user: this.$store.state.user
-
         }
     },
 }

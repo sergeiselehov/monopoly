@@ -1,5 +1,5 @@
 @extends('layouts.general')
-@section('title', 'Login')
+@section('title', 'Paymentsgate')
 @section('content')
    <v-app><login/></v-app>
 @endsection

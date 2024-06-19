@@ -45,7 +45,7 @@
                             <v-icon :icon="item.icon"></v-icon>
                         </template>
                         <template v-slot:title>
-                            <span class="menu-text-item">{{item.text}}</span>
+                            <span class="menu-text-item">{{ item.text }}</span>
                         </template>
                     </v-list-item>
                     <v-list-item
@@ -86,7 +86,7 @@
                 <v-btn icon>
                     <v-icon>mdi-bell</v-icon>
                 </v-btn>
-                <Profile />
+                <Profile/>
             </v-app-bar>
             <v-main>
                 <router-view/>
@@ -104,7 +104,7 @@ import Toast from "./Toast.vue";
 import axios from "axios";
 import Profile from "../shared/Profile.vue";
 import {mapGetters} from "vuex";
-import { useDisplay } from 'vuetify'
+import {useDisplay} from 'vuetify'
 
 export default {
     name: "Container",
@@ -113,16 +113,62 @@ export default {
         return {
             drawer: !this.mobile,
             rail: false,
-            menu_items:[
-                {to:'/home',rule:'home.view',icon:'mdi-hexagon-outline',text:'Главная',value:'home'},
-                {to:'/transactions',rule:'transaction.view',icon:'mdi-chart-timeline-variant',text:'Транзакции',value:'transactions'},
-                {to:'/balance',rule:'balance.view',icon:'mdi-wallet',text:'Баланс',value:'balance'},
-                {to:'/withdrawls',rule:'withdrawls.view',icon:'mdi-safe',text:'Выплаты',value:'withdrawls'},
-               // {to:'/disputes',rule:'balance.view',icon:'mdi-scale-balance',text:'Споры',value:'dispute'},
-                {to:'/users',rule:'user.view',icon:'mdi-account-multiple',text:'Пользователи',value:'users'},
-                {to:'/roles',rule:'role.view',icon:'mdi-monitor-account',text:'Роли',value:'role'},
-                {to:'/merchants',rule:'balance.view',icon:'mdi-store-24-hour',text:'Мерчанты',value:'merchants'},
-                {to:'/support',rule:'balance.view',icon:'mdi-headphones',text:'Поддержка',value:'support'},
+            menu_items: [
+                {
+                    to: '/home',
+                    rule: 'home.view',
+                    icon: 'mdi-hexagon-outline',
+                    text: 'Главная',
+                    value: 'home'
+                },
+                {
+                    to: '/transactions',
+                    rule: 'transaction.view',
+                    icon: 'mdi-chart-timeline-variant',
+                    text: 'Транзакции',
+                    value: 'transactions'
+                },
+                {
+                    to: '/balance',
+                    rule: 'balance.view',
+                    icon: 'mdi-wallet',
+                    text: 'Баланс',
+                    value: 'balance'
+                },
+                {
+                    to: '/withdrawls',
+                    rule: 'withdrawls.view',
+                    icon: 'mdi-safe',
+                    text: 'Выплаты',
+                    value: 'withdrawls'
+                },
+                {
+                    to: '/users',
+                    rule: 'user.view',
+                    icon: 'mdi-account-multiple',
+                    text: 'Пользователи',
+                    value: 'users'
+                },
+                {
+                    to: '/roles',
+                    rule: 'role.view',
+                    icon: 'mdi-monitor-account',
+                    text: 'Роли',
+                    value: 'role'
+                },
+                {
+                    to: '/merchants',
+                    rule: 'balance.view',
+                    icon: 'mdi-store-24-hour',
+                    text: 'Мерчанты',
+                    value: 'merchants'
+                },
+                {
+                    to: '/support',
+                    rule: 'balance.view',
+                    icon: 'mdi-headphones',
+                    text: 'Поддержка', value: 'support'
+                },
             ]
         }
     },
@@ -131,10 +177,10 @@ export default {
             axios.post('/api/v1/logout').then(res => {
                 if (res.data.code === 200) {
                     this.$refs.message.show(res.data.message)
-                   setTimeout(()=>{
-                       localStorage.removeItem('user')
-                       location.href = '/login'
-                   }, 1000)
+                    setTimeout(() => {
+                        localStorage.removeItem('user')
+                        location.href = '/login'
+                    }, 1000)
                 }
             })
         },
@@ -143,8 +189,8 @@ export default {
                 if (res.data.code === 200) {
                     this.$store.commit('setUser', res.data.data)
                 }
-            }).catch((error)=>{
-                if(this.$route.name !== 'login' && error.response?.status === 401 ){
+            }).catch((error) => {
+                if (this.$route.name !== 'login' && error.response?.status === 401) {
                     location.href = '/login'
                 }
             })
@@ -153,8 +199,8 @@ export default {
     mounted() {
         this.auth()
     },
-    computed:{
-        mobile () {
+    computed: {
+        mobile() {
             return useDisplay().mobile
         },
         ...mapGetters(['user']),
@@ -167,7 +213,7 @@ export default {
 </script>
 
 <style scoped>
-.menu-text-item{
+.menu-text-item {
     font-size: 18px;
 }
 
@@ -176,6 +222,7 @@ export default {
     background: url("/assets/img/bg-noice.png");
     box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
 }
+
 a:last-child {
     background-color: red;
 }
@@ -198,7 +245,7 @@ a:last-child {
     height: 40px;
 
     footer {
-        color: rgba(255, 255, 255, 0.30)!important;
+        color: rgba(255, 255, 255, 0.30) !important;
         font-family: "Roboto Flex Variable", sans-serif;
         font-size: 14px;
         font-style: normal;

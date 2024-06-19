@@ -63,7 +63,6 @@ export default {
                 (response) => response.data
             );
         await commit('MY_WITHDRAWALS', dataPromise.data)
-        console.log('dataPromise', dataPromise)
         return dataPromise
     },
 
@@ -72,8 +71,16 @@ export default {
             .then(
                 (response) => response.data
             );
-        await commit('MY_BALANCE_RUB', dataPromise.data.balance.balance_rub)
-        await commit('MY_BALANCE_USDT', dataPromise.data.balance.balance_usdt)
+        await commit('MY_BALANCE_RUB', dataPromise.data.balance)
+        return dataPromise
+    },
+
+    async GET_MY_CREDIT_BALANCE_FROM_API({commit}){
+        let dataPromise = await axios.get('/api/v1/credit-balance-info')
+            .then(
+                (response) => response.data
+            );
+        await commit('MY_CREDIT_BALANCE_RUB', dataPromise.data.balance)
         return dataPromise
     },
 
@@ -86,12 +93,29 @@ export default {
         return dataPromise
     },
 
-    async GET_MY_CREDIT_BALANCE_FROM_API({commit}){
-        let dataPromise = await axios.get('/api/v1/credit-balance-info')
+    async GET_WITHDRAWAL_PAYMENTS_FROM_API({commit}, data) {
+        let dataPromise = await axios.get('/api/v1/withdrawal-payments?page='+data.page,
+            {
+                params:data.data
+            })
             .then(
                 (response) => response.data
             );
-        await commit('MY_CREDIT_BALANCE_RUB', dataPromise.data.balance)
+        await commit('WITHDRAWAL_PAYMENTS', dataPromise.data)
+        await commit('PAGINATION', dataPromise.pagination)
         return dataPromise
     },
+    async GET_DISPUTES({commit}, data) {
+        let dataPromise = await axios.get('/api/v1/disputes?page='+data.page,
+            {
+                params:data.data
+            })
+            .then(
+                (response) => response.data
+            );
+        await commit('DISPUTES', dataPromise.data)
+        await commit('PAGINATION', dataPromise.pagination)
+        return dataPromise
+    },
+
 }

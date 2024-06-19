@@ -5,7 +5,7 @@
         class="pa-8"
         color="transparent"
     >
-        <v-row>
+        <v-row justify="start">
             <BalanceCard
                 class="ml-3 mr-5"
                 title="Баланс P2P"
@@ -17,6 +17,7 @@
                 :balance="GET_MY_CREDIT_BALANCE_RUB"
             />
         </v-row>
+
         <v-row>
             <v-col
                 lg="6"
@@ -26,6 +27,7 @@
             >
                 <TransactionGraph/>
             </v-col>
+
             <v-col
                 lg="6"
                 md="6"
@@ -34,6 +36,7 @@
             >
                 <PaymentsPie/>
             </v-col>
+
             <v-col
                 lg="6"
                 md="6"
@@ -104,11 +107,15 @@
 
             </v-col>
         </v-row>
+
         <v-row v-if="!isManager">
-            <TotalCountTransactions class="ml-3 mr-5"/>
-            <TotalCountPayments class="ml-3 mr-5"/>
-            <TotalCountDisputes class="ml-3 mr-5"/>
+                <TotalCountTransactions class="ml-3 mr-5" />
+
+                <TotalCountPayments class="ml-3 mr-5" />
+
+                <TotalCountDisputes class="ml-3 mr-5" />
         </v-row>
+
         <v-row>
 
             <v-col
@@ -246,20 +253,21 @@ import {
     Title,
     Tooltip,
     Legend
-} from 'chart.js';
+} from 'chart.js'
 import {Pie} from 'vue-chartjs'
 import SubHeader from "./shared/SubHeader.vue";
 import TransactionGraph from "./shared/Graphs/TransactionGraph.vue";
 import BalanceCard from "./shared/BalanceCard.vue";
+import CreditBalanceCard from "./shared/CreditBalanceCard.vue";
 import WithdrawlsCard from "./shared/WithdrawlsCard.vue";
 import SmallLineCard from "./shared/SmallLineCard.vue";
 import IncomeCard from "./shared/IncomeCard.vue";
-import CreditBalanceCard from "./shared/CreditBalanceCard.vue";
 import {mapActions, mapGetters} from "vuex";
-import PaymentsPie from "./shared/Graphs/PaymentsPie.vue";
+import SummaryBalanceCard from "./shared/SummaryBalanceCard.vue";
 import TotalCountTransactions from "./shared/TotalCountTransactions.vue";
 import TotalCountPayments from "./shared/TotalCountPayments.vue";
 import TotalCountDisputes from "./shared/TotalCountDisputes.vue";
+import PaymentsPie from "./shared/Graphs/PaymentsPie.vue";
 
 ChartJS.register(
     ArcElement,
@@ -275,20 +283,10 @@ ChartJS.register(
 export default {
     name: "Home",
     components: {
+        PaymentsPie,
         TotalCountDisputes,
         TotalCountPayments,
-        TotalCountTransactions,
-        PaymentsPie,
-        CreditBalanceCard,
-        IncomeCard,
-        SmallLineCard,
-        WithdrawlsCard,
-        BalanceCard,
-        TransactionGraph,
-        SubHeader,
-        Toast,
-        Pie
-    },
+        TotalCountTransactions, SummaryBalanceCard, IncomeCard, SmallLineCard, WithdrawlsCard, BalanceCard, TransactionGraph, SubHeader, Toast, Pie, CreditBalanceCard},
     data() {
         return {
             labels: ['VueJs', 'EmberJs'],
@@ -327,12 +325,12 @@ export default {
         ...mapActions([
             'GET_MY_CREDIT_BALANCE_FROM_API',
         ]),
-    },
-    mounted() {
-        this.isManager = this.$store.state.user.role_names.includes('Менеджер');
-        this.GET_MY_BALANCE_FROM_API.call();
-        this.GET_MY_CREDIT_BALANCE_FROM_API.call();
-    }
+   },
+   mounted() {
+       this.isManager = this.$store.state.user.role_names.includes('Менеджер');
+       this.GET_MY_BALANCE_FROM_API.call()
+       this.GET_MY_CREDIT_BALANCE_FROM_API.call()
+   }
 }
 </script>
 

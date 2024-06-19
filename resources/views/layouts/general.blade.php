@@ -15,8 +15,8 @@
 
     @yield('meta')
 </head>
-<body style="min-width: 400px; position: relative;background-color: #0B5838">
-<div id="app" >
+<body style="min-width: 400px; position: relative;background-color: #202221">
+<div id="app">
     <main>
         @yield('content')
     </main>

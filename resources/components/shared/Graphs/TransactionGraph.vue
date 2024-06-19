@@ -5,8 +5,8 @@
             <v-select density="compact" :items="list_items" v-model="period" item-title="text" item-value="value"></v-select>
         </v-card-title>
         <v-card-text>
-            <div style="position: relative; height:40vh;">
-                <Line :data="dataLine" :options="optionsLine"/>
+            <div v-if="values.length > 0" style="position: relative; height:40vh;">
+                <Line :data="dataLine" :options="optionsLine" @change="console.log(dataLine)"/>
             </div>
         </v-card-text>
     </v-card>

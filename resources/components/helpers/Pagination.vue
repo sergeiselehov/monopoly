@@ -1,17 +1,17 @@
 <template>
     <v-pagination
         v-if="data!=null"
-        v-model="data.current_page"
+        v-model="page"
         :length="data.last_page"
         :total-visible="totalVisible"
-        v-show="data.last_page>1"
-        @input="method(data.current_page)"
+        v-show="data.last_page > 1"
     ></v-pagination>
 </template>
 
 <script>
 export default {
     name: "Pagination",
+    emits: ['pagination-change-page'],
     props: {
         data: {
             type: Object,
@@ -23,11 +23,16 @@ export default {
             default: () => undefined
         }
     },
-    methods: {
-        getData(page) {
-            this.$emit('pagination-change-page', page);
-        }
-    }
+    data: () => ({
+        page: 1
+    }),
+
+    watch: {
+      page(newValue){
+          this.$emit('pagination-change-page', newValue);
+      }
+    },
+
 }
 </script>
 

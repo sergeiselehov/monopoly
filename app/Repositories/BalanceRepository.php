@@ -4,8 +4,12 @@ namespace App\Repositories;
 
 
 use App\Http\ApiRequests\ApiRequest;
+use App\Models\Commission;
 use App\Models\Payment;
+use App\Models\PaymentStatus;
 use App\Models\User;
+use App\Models\WithdrawalPayment;
+use App\Models\WithdrawalPaymentStatus;
 use App\Models\WithdrawalStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
@@ -15,204 +19,220 @@ use Illuminate\Support\Facades\DB;
 
 class BalanceRepository
 {
-
-    const DAY = 'day';
-    const WEEK = 'week';
-    const MONTH = 'month';
-    const YEAR = 'year';
-
-
-    public function getCurrentBalance(User $user){
-        $total_balance_result = DB::table('payments')
-            ->leftJoin('merchants','merchants.id','=','payments.merchant_id')
-            ->leftJoin('users','users.id','=','merchants.user_id')
-            ->where('users.id','=',$user->id)
-            ->select(DB::raw('
-                SUM(payments.amount_balance) as sum_rub,
-                SUM(payments.usdt_paid_balance) as sum_usdt
-                '
-            ))
-            ->get()
-        ;
-
-        $withdrawals = DB::table('withdrawals')
-            ->select(DB::raw('
-                SUM(withdrawals.amount_paid) as sum_amount_rub,
-                SUM(withdrawals.amount_usdt_paid) as sum_amount_usdt
-                ',
-            ))
-            ->where('withdrawals.user_id','=',$user->id)
-            ->where('withdrawals.status','=',WithdrawalStatus::PAID)
-            ->get()
-        ;
-
-        return $this->countCurrentBalance($total_balance_result,$withdrawals);
-    }
-
-    public function countCurrentBalance($total_balance_result, $withdrawals)
+    public function balanceSql($user_id = null)
     {
-        $balance_rub = $total_balance_result[0]?->sum_rub - $withdrawals[0]?->sum_amount_rub;
-        $balance_usdt = round(($total_balance_result[0]?->sum_usdt - $withdrawals[0]?->sum_amount_usdt),2);
-        return ['balance_rub'=>$balance_rub,'balance_usdt'=>$balance_usdt];
-    }
-
-
-
-    public function getMessagesList(array $communityIds, $request): Builder
-    {
-        return $this->queryMessages($communityIds, $request);
-    }
-
-
-    public function getListForFile(array $communityIds, $request): Builder
-    {
-        $builder = $this->queryMessages($communityIds, $request);
-        $builder->orderBy('count_messages', 'DESC');
-        return $builder;
-    }
-
-    public function getBalanceChart(ApiMessageStatisticChartRequest $request)
-    {
-
-        $scale = $this->getScale($request->input('period'));
-        $start = $this->getStartDate($request->input('period') ?? 'week')->toDateTimeString();
-        $end = $this->getEndDate()->toDateTimeString();
-
-        $tm = 'telegram_messages';
-        $tc = 'telegram_connections';
-        $com = 'communities';
-
-        DB::statement("SET TIMEZONE TO 'Europe/Moscow'");
-        $sub = DB::table(DB::raw("generate_series('$start'::timestamp, '$end'::timestamp, '$scale'::interval) as d(dt)"))
-            ->leftJoin($tm, function (JoinClause $join) use ($tm, $scale) {
-                $join->on(DB::raw(" to_timestamp($tm.message_date)"), '>=', 'd.dt')
-                    ->on(DB::raw(" to_timestamp($tm.message_date)"), '<', DB::raw("(d.dt + '$scale'::interval)"));
-            })
-            ->select([
-                DB::raw("d.dt"),
-                DB::raw("COUNT(distinct($tm.message_id)) as messages"),
-            ]);
-        $sub->join('telegram_connections', function (JoinClause $join) use ($tm) {
-            $join->on("$tm.group_chat_id", '=', 'telegram_connections.chat_id')
-                ->on("$tm.group_chat_id", '=', 'telegram_connections.comment_chat_id', 'OR');
-        })
-            ->join('communities', 'communities.connection_id', "=", "telegram_connections.id");
-
-        $sub->groupBy("d.dt");
-        if (!empty($request->input('community_ids'))) {
-            $sub->whereIn('communities.id', $request->input('community_ids'));
-        }
-        if (!empty($request->input('telegram_users_id'))) {
-            $sub->whereIn('telegram_messages.telegram_user_id', $request->input('telegram_users_id'));
-        }
-        $sub->where('communities.owner', Auth::user()->id);
-        $builder = DB::table(DB::raw("generate_series('$start'::timestamp, '$end'::timestamp, '$scale'::interval) as d1(dt)"))
-            ->leftJoin(DB::raw("({$sub->toSql()}) as sub"), 'sub.dt', '=', 'd1.dt')
-            ->select([
-                DB::raw("d1.dt as scale"),
-                DB::raw("CAST(EXTRACT(epoch FROM d1.dt) AS INTEGER) as scale_unix"),
-                DB::raw("coalesce(sub.messages,0) as messages"),
-            ])
-            ->mergeBindings($sub)
-            ->orderBy('scale')
-            ->orderBy('scale_unix');
-
-        return $builder->get();
-    }
-
-    /**
-     * @param array $communityIds
-     * @param TeleMessagesFilter $filter
-     * @return \Illuminate\Database\Eloquent\Builder|Builder
-     * @throws \Exception
-     */
-    protected function queryMessages(array $communityIds, $request)
-    {
-        $start = $this->getStartDate($request->input('period') ?? 'week')->toDateTimeString();
-        $end = $this->getEndDate()->toDateTimeString();
-
-        $tc = 'telegram_connections';
-        $tm = 'telegram_messages';
-        $tu = 'telegram_users';
-        $com = 'communities';
-        $tmr = 'telegram_message_reactions';
-
-        $subQuery = DB::table($tm)
-            ->join('telegram_connections', function (JoinClause $join) use ($tm) {
-                $join->on("$tm.group_chat_id", '=', 'telegram_connections.chat_id')
-                    ->on("$tm.group_chat_id", '=', 'telegram_connections.comment_chat_id', 'OR');
-            })
-            ->join('communities', 'communities.connection_id', "=", "telegram_connections.id")
-            ->join($tu, "$tm.telegram_user_id", "=", "$tu.telegram_id")
-            ->select([
-                DB::raw("distinct($tm.telegram_user_id) as telegram_id"),
-                "$tm.group_chat_id",
-                "$tm.message_date",
-                "$tu.user_name as nick_name",
-                DB::raw("CONCAT ($tu.first_name,' ', $tu.last_name) as name"),
-                DB::raw("COUNT(distinct($tm.id)) as count_messages")
-            ])
-            ->groupBy(
-                "$tm.telegram_user_id",
-                "$tm.group_chat_id",
-                "$tm.message_date",
-                "$tu.first_name",
-                "$tu.last_name",
-                "$tu.user_name",
-            );
-        $subQuery->whereDate(DB::raw('telegram_messages.created_at'), '>=', $start);
-        $subQuery->whereDate(DB::raw('telegram_messages.created_at'), '<=', $end);
-        $subQuery->where('communities.owner', Auth::user()->id);
-        if (!empty($request->input('community_ids'))) {
-            $subQuery->whereIn('communities.id', $request->input('community_ids'));
+        $user_additional_decision = ' TRUE ';
+        if ($user_id !== null) {
+            $user_additional_decision = " users.id = $user_id";
         }
 
-        return DB::query()
-            ->fromSub($subQuery, 'subquery')
-            ->select(
-                'subquery.telegram_id',
-                DB::raw('MIN(subquery.group_chat_id) as group_chat_id'),
-                DB::raw('MIN(subquery.message_date) as message_date'),
-                DB::raw('MIN(subquery.nick_name) as nick_name'),
-                DB::raw('MIN(subquery.name) as name'),
-                DB::raw("JSON_AGG(json_build_object('message_date', subquery.message_date)) AS messages")
+        $sql = "
+            WITH payment_balance AS (
+                SELECT user_id,
+                       SUM(payments.amount) AS payment_amount,
+                       SUM(commissions.amount) AS commission_amount
+                FROM payments
+                LEFT JOIN commissions ON commissions.commissionable_type = 'App\Models\Payment'
+                    AND commissions.commissionable_id = payments.id
+                WHERE payment_status_id IN (" . PaymentStatus::SUCCESSED . ", " . PaymentStatus::ACCEPTED_SUCCESSED . ")
+                GROUP BY user_id
+            ),
+            withdrawal_payments_balance AS (
+                SELECT user_id,
+                       SUM(withdrawal_payments.amount) AS withdrawal_amount,
+                       SUM(commissions.amount) AS commission_amount
+                FROM withdrawal_payments
+                LEFT JOIN commissions ON commissions.commissionable_type = 'App\Models\WithdrawalPayment'
+                    AND commissions.commissionable_id = withdrawal_payments.id
+                WHERE withdrawal_payment_status_id IN (" . WithdrawalPaymentStatus::SUCCESSED . ")
+                GROUP BY user_id
+            ),
+            credit_balance AS (
+                SELECT user_id,
+                       SUM(amount) AS credit
+                FROM credit_payments
+                GROUP BY user_id
+            ),
+            credit_withdrawals AS (
+                SELECT user_id,
+                       SUM(withdrawal_payments.amount) AS withdrawal_amount
+                FROM withdrawal_payments
+                WHERE withdrawal_payment_status_id IN (" . WithdrawalPaymentStatus::SUCCESSED . ")
+                    AND is_credit = 1
+                GROUP BY user_id
+            ),
+            transactions_last_day AS (
+                SELECT user_id,
+                       COUNT(*) AS transaction_count
+                FROM payments
+                WHERE created_at >= NOW() - INTERVAL '1 DAY'
+                GROUP BY user_id
+            ),
+            successful_transactions_last_day AS (
+                SELECT user_id,
+                       COUNT(*) AS successful_transaction_count
+                FROM payments
+                WHERE created_at >= NOW() - INTERVAL '1 DAY'
+                  AND payment_status_id IN (" . PaymentStatus::SUCCESSED . ", " . PaymentStatus::ACCEPTED_SUCCESSED . ")
+                GROUP BY user_id
+            ),
+            withdrawals_last_day AS (
+                SELECT user_id,
+                       COUNT(*) AS withdrawal_count
+                FROM withdrawal_payments
+                WHERE created_at >= NOW() - INTERVAL '1 DAY'
+                GROUP BY user_id
+            ),
+            successful_withdrawals_last_day AS (
+                SELECT user_id,
+                       COUNT(*) AS successful_withdrawal_count
+                FROM withdrawal_payments
+                WHERE created_at >= NOW() - INTERVAL '1 DAY'
+                  AND withdrawal_payment_status_id IN (" . WithdrawalPaymentStatus::SUCCESSED . ")
+                GROUP BY user_id
             )
-            ->groupBy('subquery.telegram_id');
+            SELECT
+                   users.id,
+                   users.name,
+                   payment_balance.payment_amount,
+                   payment_balance.commission_amount AS payment_commission_amount,
+                   withdrawal_payments_balance.withdrawal_amount,
+                   withdrawal_payments_balance.commission_amount AS withdrawal_payment_commission_amount,
+                   credit_withdrawals.withdrawal_amount AS credit_withdrawal_amount,
+                   credit_balance.credit,
+                   transactions_last_day.transaction_count AS transactions_last_day,
+                   successful_transactions_last_day.successful_transaction_count AS successful_transactions_last_day,
+                   withdrawals_last_day.withdrawal_count AS withdrawals_last_day,
+                   successful_withdrawals_last_day.successful_withdrawal_count AS successful_withdrawals_last_day,
+                   (
+                       COALESCE(payment_balance.payment_amount, 0) +
+                       COALESCE(credit_balance.credit, 0) -
+                       COALESCE(payment_balance.commission_amount, 0) -
+                       COALESCE(withdrawal_payments_balance.commission_amount, 0) -
+                       COALESCE(withdrawal_payments_balance.withdrawal_amount, 0)
+                   ) AS balance,
+                   (
+                       COALESCE(credit_balance.credit, 0) -
+                       COALESCE(credit_withdrawals.withdrawal_amount, 0)
+                   ) AS credit_balance
+            FROM users
+            LEFT JOIN payment_balance ON payment_balance.user_id = users.id
+            LEFT JOIN withdrawal_payments_balance ON withdrawal_payments_balance.user_id = users.id
+            LEFT JOIN credit_balance ON credit_balance.user_id = users.id
+            LEFT JOIN credit_withdrawals ON credit_withdrawals.user_id = users.id
+            LEFT JOIN transactions_last_day ON transactions_last_day.user_id = users.id
+            LEFT JOIN successful_transactions_last_day ON successful_transactions_last_day.user_id = users.id
+            LEFT JOIN withdrawals_last_day ON withdrawals_last_day.user_id = users.id
+            LEFT JOIN successful_withdrawals_last_day ON successful_withdrawals_last_day.user_id = users.id
+            WHERE users.integration_type_id IS NOT NULL AND $user_additional_decision
+        ";
+        return $sql;
+    }
+
+    public function summaryBalanceSql()
+    {
+        $sql = "
+            with payment_balance as (
+                SELECT user_id,
+                       SUM(payments.amount) as payment_amount,
+                       SUM(commissions.amount) as commisiion_amount
+                FROM payments
+                LEFT JOIN commissions ON commissions.commissionable_type ='App\Models\Payment' and commissions.commissionable_id=payments.id
+                WHERE payment_status_id IN (" . PaymentStatus::SUCCESSED . ", " . PaymentStatus::ACCEPTED_SUCCESSED . ")
+                GROUP BY user_id
+            ),
+            withdrawal_payments_balance as (
+                SELECT user_id,
+                       SUM(withdrawal_payments.amount) as withdrawal_amount,
+                       SUM(commissions.amount) as commisiion_amount
+                FROM withdrawal_payments
+                LEFT JOIN commissions ON commissions.commissionable_type ='App\Models\WithdrawalPayment' and commissions.commissionable_id=withdrawal_payments.id
+                WHERE withdrawal_payment_status_id IN (" . WithdrawalPaymentStatus::SUCCESSED . ")
+                GROUP BY user_id
+            ),
+            credit_balance as (
+                SELECT user_id,SUM(amount) as credit
+                FROM credit_payments
+                GROUP BY user_id
+            ),
+            credit_withdrawals as (
+                SELECT user_id,
+                       SUM(withdrawal_payments.amount) as withdrawal_amount
+                FROM withdrawal_payments
+                WHERE withdrawal_payment_status_id IN (" . WithdrawalPaymentStatus::SUCCESSED . ") and is_credit=1
+                GROUP BY user_id
+            )
+                SELECT
+                       SUM(payment_balance.payment_amount) as payment_balance,
+                       SUM(payment_balance.commisiion_amount) as payment_commission_amount,
+                       SUM(withdrawal_payments_balance.withdrawal_amount) as withdrawal_amount,
+                       SUM(withdrawal_payments_balance.commisiion_amount) as withdrawal_payment_commission_amount,
+                       SUM(credit_withdrawals.withdrawal_amount) as credit_withdrawal_amount,
+                       SUM(credit_balance.credit) as summary_credit,
+                       SUM(
+                           payment_balance.payment_amount +
+                           COALESCE(credit_balance.credit,0) -
+                           payment_balance.commisiion_amount -
+                           COALESCE(withdrawal_payments_balance.commisiion_amount,0) -
+                           withdrawal_payments_balance.withdrawal_amount) as balance,
+                       SUM(credit_balance.credit-COALESCE(credit_withdrawals.withdrawal_amount,0))
+                FROM users
+                         LEFT JOIN payment_balance ON payment_balance.user_id = users.id
+                         LEFT JOIN withdrawal_payments_balance ON withdrawal_payments_balance.user_id=users.id
+                         LEFT JOIN credit_balance ON credit_balance.user_id=users.id
+                         LEFT JOIN credit_withdrawals ON credit_withdrawals.user_id=users.id
+                WHERE users.integration_type_id IS NOT NULL
+
+
+        ";
+        return $sql;
+    }
+
+    public function getBalanceList()
+    {
+        $sql = $this->balanceSql();
+        $query_result = DB::select($sql);
+        return $query_result;
     }
 
 
-    public function getStartDate($value): ?Carbon
+    public function getCurrentBalance(User $user)
     {
-        switch ($value) {
-            case self::DAY:
-                return $this->getEndDate()->startOfDay();
-            case self::WEEK:
-                return $this->getEndDate()->sub('6 days')->startOfDay();
-            case self::MONTH:
-                return $this->getEndDate()->sub('30 days')->startOfDay();
-            case self::YEAR:
-                return $this->getEndDate()->sub('11 months')->startOfMonth();
+        $sql = $this->balanceSql($user->id);
+        $query_result = DB::select($sql);
+        $balance = 0;
+        if (
+            $query_result !== null
+            && !empty($query_result[0])
+            && !empty($query_result[0]->balance)
+        ) {
+            $balance = $query_result[0]->balance;
         }
-        return null;
+        return $balance;
     }
 
-    public function getEndDate(): Carbon
+    public function getSummaryBalance()
     {
-        return Carbon::now();
-    }
-
-    public function getScale($period)
-    {
-        $value = $period ?? 'week';
-        switch ($value) {
-            case self::YEAR:
-                return "1 month";//в среднем месяц
-            case self::MONTH:
-                return "1 day";
-            case self::WEEK:
-            default:
-                return "4 hour";//день
+        $sql = $this->summaryBalanceSql();
+        $query_result = DB::select($sql);
+        $summaryBalance = 0;
+        $payment_commission = 0;
+        $withdrawal_payments_commission = 0;
+        if (
+            $query_result !== null
+            && !empty($query_result[0])
+            && !empty($query_result[0]->balance)
+        ) {
+            $summaryBalance = $query_result[0]->balance;
+            $payment_commission = $query_result[0]->payment_commission_amount;
+            $withdrawal_payments_commission = $query_result[0]->withdrawal_payment_commission_amount;
         }
+        return [
+            'summaryBalanceNotFormat'=>$summaryBalance,
+            'summaryBalance' => number_format(round($summaryBalance), 2, ',', ' '),
+            'summaryPaymentsCommission' => number_format(round($payment_commission), 2, ',', ' '),
+            'summaryWithdrawalPaymentsCommission' => number_format(round($withdrawal_payments_commission), 2, ',', ' '),
+        ];
     }
 
 }

@@ -13,15 +13,18 @@ class WithdrawalPayment extends Model
 
     public function status():BelongsTo
     {
-        return $this->belongsTo(WithdrawalPaymentStatus::class,'withdrawal_status_id','id');
+        return $this->belongsTo(WithdrawalPaymentStatus::class,'withdrawal_payment_status_id','id');
     }
-
 
     public function bankBin()
     {
         return $this->belongsTo(BankBin::class,'bin','bin');
     }
 
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class);
+    }
 
 
 }

@@ -35,5 +35,8 @@ export default {
     GET_MY_WITHDRAWALS_SUM(state) {
         return state.my_withdrawwals_sum
     },
+    GET_MY_CREDIT_BALANCE_RUB(state) {
+        return state.my_credit_balance_rub
+    },
     user: state => state.user
 }

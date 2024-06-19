@@ -15,7 +15,7 @@ class UserStoreRequest extends ApiRequest
     public function rules():array
     {
         return [
-            'name' => 'required|string|min:3|max:20',
+            'name' => 'required|string|min:3|max:100',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|confirmed|min:8',
             'password_confirmation' => 'required|string',

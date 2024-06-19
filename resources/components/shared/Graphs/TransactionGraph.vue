@@ -2,11 +2,11 @@
     <v-card class="rounded-xl text-center h-100" color="sdgreen">
         <v-card-title class="d-flex">
             <h2 class="mr-5">График транзакций</h2>
-            <v-select density="compact" :items="list_items" ></v-select>
+            <v-select density="compact" :items="list_items" v-model="period" item-title="text" item-value="value"></v-select>
         </v-card-title>
         <v-card-text>
             <div style="position: relative; height:40vh;">
-                <Line :data="dataLine" :options="optionsLine" />
+                <Line :data="dataLine" :options="optionsLine"/>
             </div>
         </v-card-text>
     </v-card>
@@ -32,33 +32,57 @@ ChartJS.register(
     Legend
 )
 
-ChartJS.register(
-    ArcElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Tooltip,
-    Legend
-)
-
 export default {
-    name: "Home",
+    name: "TransactionsGraph",
     components: { Line },
-    data() {
-        return {
-            dataLine : {
-                labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+    methods: {
+        getData() {
+            axios.get('api/v1/transactions/chart?period=' + this.period)
+                .then(response => {
+                    this.labels = response.data.data.labels;
+                    this.values = response.data.data.values;
+                    this.updateChart();
+                })
+        },
+        updateChart() {
+            this.dataLine = {
+                labels: this.labels,
                 datasets: [
                     {
                         label: 'График транзакций',
                         backgroundColor: '#f87979',
-                        data: [0, 800, 500, 2800, 1950, 750, 1500]
+                        data: this.values,
+                    }
+                ]
+            };
+        },
+    },
+    watch: {
+        period() {
+            this.getData();
+        }
+    },
+    mounted() {
+        this.getData();
+    },
+    data() {
+        return {
+            period: 'day',
+            values: [],
+            labels: [],
+            dataLine : {
+                labels: this.labels,
+                datasets: [
+                    {
+                        label: 'График транзакций',
+                        backgroundColor: '#f87979',
+                        data: this.values, //[0, 800, 500, 2800, 1950, 750, 1500]
                     }
                 ]
             },
             optionsLine: {
                 plugins: {
+                    datalabels: false,
                     legend: {
                         display: false
                     }
@@ -91,8 +115,12 @@ export default {
                 pointBorderWidth: 7,
                 borderColor: 'rgba(255, 255, 255, 0.7)',
             },
-            list_items:[
-                'Сутки', '7 суток', '30 суток', '365 суток', 'За все время'
+            list_items: [
+                { text: 'Сутки', value: 'day' },
+                { text: '7 суток', value: 'week' },
+                { text: '30 суток', value: 'month' },
+                { text: '365 суток', value: 'year' },
+                { text: 'За все время', value: 'all' }
             ]
         }
     },

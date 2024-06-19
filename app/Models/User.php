@@ -25,6 +25,11 @@ class User extends Authenticatable
         'password',
         'email_verified_at',
         'parent_user_id',
+        'app_key',
+        'secret_key',
+        'input_percent',
+        'output_percent'
+
     ];
     /**
      * The attributes that should be hidden for serialization.
@@ -44,6 +49,11 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function isAdmin()
+    {
+        return $this->hasRole('Super Admin');
+    }
 
     public function getRoleNamesAttribute()
     {

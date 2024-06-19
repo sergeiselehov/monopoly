@@ -1,10 +1,22 @@
 <template>
-    <SubHeader title="Привет, Админ" description="Текст подсказки для раздела" />
+    <SubHeader title="Главная"/>
 
     <v-sheet
         class="pa-8"
         color="transparent"
     >
+        <v-row>
+            <BalanceCard
+                class="ml-3 mr-5"
+                title="Баланс P2P"
+                :balance-rus="GET_MY_BALANCE_RUB"
+            />
+            <CreditBalanceCard
+                class="ml-3 mr-5"
+                title="Кредитный баланс"
+                :balance="GET_MY_CREDIT_BALANCE_RUB"
+            />
+        </v-row>
         <v-row>
             <v-col
                 lg="6"
@@ -12,9 +24,16 @@
                 sm="6"
                 cols="12"
             >
-                <TransactionGraph />
+                <TransactionGraph/>
             </v-col>
-
+            <v-col
+                lg="6"
+                md="6"
+                sm="6"
+                cols="12"
+            >
+                <PaymentsPie/>
+            </v-col>
             <v-col
                 lg="6"
                 md="6"
@@ -28,61 +47,67 @@
                         <v-card-text>
                             <v-row>
                                 <v-col cols="12" style="height: 100px;">
-                                    <Pie :data="data" :options="options" />
+                                    <Pie :data="data" :options="options"/>
                                 </v-col>
-                                <v-col xl="6"  md="12"  sm="12" cols="12">Час</v-col>
+                                <v-col xl="6" md="12" sm="12" cols="12">Час</v-col>
 
                             </v-row>
                         </v-card-text>
                         <v-card-text>
                             <v-row>
                                 <v-col cols="12" style="height: 100px;">
-                                    <Pie :data="data" :options="options" />
+                                    <Pie :data="data" :options="options"/>
                                 </v-col>
-                                <v-col xl="6"  md="12"  sm="12" cols="12">Сутки</v-col>
+                                <v-col xl="6" md="12" sm="12" cols="12">Сутки</v-col>
                             </v-row>
                         </v-card-text>
                         <v-card-text>
                             <v-row>
                                 <v-col cols="12" style="height: 100px;">
-                                    <Pie :data="data" :options="options" />
+                                    <Pie :data="data" :options="options"/>
                                 </v-col>
-                                <v-col xl="6"  md="12"  sm="12" cols="12">Общая</v-col>
+                                <v-col xl="6" md="12" sm="12" cols="12">Общая</v-col>
                             </v-row>
                         </v-card-text>
                     </v-card>
                 </v-row>
                 <v-row>
                     <SmallLineCard/>
-                    <v-card v-if="false" title="Конверсия C2C" class="rounded-xl text-center h-100" color="common-light-gray">
+                    <v-card v-if="false" title="Конверсия C2C" class="rounded-xl text-center h-100"
+                            color="common-light-gray">
                         <v-card-text>
                             <v-row>
                                 <v-col cols="6" style="height: 100px;">
-                                    <Pie :data="data" :options="options" />
+                                    <Pie :data="data" :options="options"/>
                                 </v-col>
-                                <v-col xl="6"  md="6"  sm="12" cols="12">Час</v-col>
+                                <v-col xl="6" md="6" sm="12" cols="12">Час</v-col>
                             </v-row>
                         </v-card-text>
                         <v-card-text>
                             <v-row>
                                 <v-col cols="6" style="height: 100px;">
-                                    <Pie :data="data" :options="options" />
+                                    <Pie :data="data" :options="options"/>
                                 </v-col>
-                                <v-col xl="6"  md="6"  sm="12" cols="12">Сутки</v-col>
+                                <v-col xl="6" md="6" sm="12" cols="12">Сутки</v-col>
                             </v-row>
                         </v-card-text>
                         <v-card-text>
                             <v-row>
                                 <v-col cols="6" style="height: 100px;">
-                                    <Pie :data="data" :options="options" />
+                                    <Pie :data="data" :options="options"/>
                                 </v-col>
-                                <v-col xl="6"  md="6"  sm="12" cols="12">Общая</v-col>
+                                <v-col xl="6" md="6" sm="12" cols="12">Общая</v-col>
                             </v-row>
                         </v-card-text>
                     </v-card>
                 </v-row>
 
             </v-col>
+        </v-row>
+        <v-row v-if="!isManager">
+            <TotalCountTransactions class="ml-3 mr-5"/>
+            <TotalCountPayments class="ml-3 mr-5"/>
+            <TotalCountDisputes class="ml-3 mr-5"/>
         </v-row>
         <v-row>
 
@@ -93,12 +118,13 @@
                 sm="6"
                 cols="12"
             >
-                <v-card title="Доходы" class="rounded-xl text-center h-100 text-indigo-darken-4" color="common-light-gray">
+                <v-card title="Доходы" class="rounded-xl text-center h-100 text-indigo-darken-4"
+                        color="common-light-gray">
                     <v-card-text>
                         <v-row>
-                            <v-col xl="6"  md="6"  sm="12" cols="12">Общий</v-col>
+                            <v-col xl="6" md="6" sm="12" cols="12">Общий</v-col>
                             <v-col xl="6" md="6" sm="12" cols="12">
-                                <v-select density="compact" :items="list_items" ></v-select>
+                                <v-select density="compact" :items="list_items"></v-select>
                             </v-col>
                         </v-row>
                         <v-row>
@@ -108,7 +134,7 @@
 
                     <v-card-text>
                         <v-row>
-                            <v-col xl="6"  md="6"  sm="12" cols="12">Валовый</v-col>
+                            <v-col xl="6" md="6" sm="12" cols="12">Валовый</v-col>
                         </v-row>
                         <v-row>
                             <v-col cols="12">100 000 000</v-col>
@@ -124,7 +150,7 @@
                 cols="12"
                 v-if="false"
             >
-                <WithdrawlsCard balance="100 000 000" withdrawls="100 000 000" />
+                <WithdrawlsCard balance="100 000 000" withdrawls="100 000 000"/>
             </v-col>
             <v-col
                 lg="6"
@@ -133,30 +159,31 @@
                 cols="12"
                 v-if="false"
             >
-                <IncomeCard />
-                <v-card v-if="false" title="Конверсия E-COM" class="rounded-xl text-center h-100" color="common-light-gray">
+                <IncomeCard/>
+                <v-card v-if="false" title="Конверсия E-COM" class="rounded-xl text-center h-100"
+                        color="common-light-gray">
                     <v-card-text>
                         <v-row>
                             <v-col cols="6" style="height: 100px;">
-                                <Pie :data="data" :options="options" />
+                                <Pie :data="data" :options="options"/>
                             </v-col>
-                            <v-col xl="6"  md="6"  sm="12" cols="12">Час</v-col>
+                            <v-col xl="6" md="6" sm="12" cols="12">Час</v-col>
                         </v-row>
                     </v-card-text>
                     <v-card-text>
                         <v-row>
                             <v-col cols="6" style="height: 100px;">
-                                <Pie :data="data" :options="options" />
+                                <Pie :data="data" :options="options"/>
                             </v-col>
-                            <v-col xl="6"  md="6"  sm="12" cols="12">Сутки</v-col>
+                            <v-col xl="6" md="6" sm="12" cols="12">Сутки</v-col>
                         </v-row>
                     </v-card-text>
                     <v-card-text>
                         <v-row>
                             <v-col cols="6" style="height: 100px;">
-                                <Pie :data="data" :options="options" />
+                                <Pie :data="data" :options="options"/>
                             </v-col>
-                            <v-col xl="6"  md="6"  sm="12" cols="12">Общая</v-col>
+                            <v-col xl="6" md="6" sm="12" cols="12">Общая</v-col>
                         </v-row>
                     </v-card-text>
                 </v-card>
@@ -187,7 +214,7 @@
                 <v-card title="Спорные платежи" class="rounded-xl text-center h-100" color="common-light-gray">
                     <v-card-text>
                         <v-row>
-                            <v-col xl="6"  md="6"  sm="12" cols="12">Количество</v-col>
+                            <v-col xl="6" md="6" sm="12" cols="12">Количество</v-col>
                         </v-row>
                         <v-row>
                             0
@@ -195,7 +222,7 @@
                     </v-card-text>
                     <v-card-text>
                         <v-row>
-                            <v-col xl="6"  md="6"  sm="12" cols="12">Баланс</v-col>
+                            <v-col xl="6" md="6" sm="12" cols="12">Баланс</v-col>
                         </v-row>
                         <v-row>
                             0
@@ -204,12 +231,13 @@
                 </v-card>
             </v-col>
         </v-row>
-        </v-sheet>
+    </v-sheet>
 </template>
 
 <script>
 import Toast from "./helpers/Toast.vue";
-import { ArcElement,
+import {
+    ArcElement,
     Chart as ChartJS,
     CategoryScale,
     LinearScale,
@@ -217,14 +245,22 @@ import { ArcElement,
     LineElement,
     Title,
     Tooltip,
-    Legend} from 'chart.js'
-import { Pie } from 'vue-chartjs'
+    Legend
+} from 'chart.js';
+import {Pie} from 'vue-chartjs'
 import SubHeader from "./shared/SubHeader.vue";
 import TransactionGraph from "./shared/Graphs/TransactionGraph.vue";
 import BalanceCard from "./shared/BalanceCard.vue";
 import WithdrawlsCard from "./shared/WithdrawlsCard.vue";
 import SmallLineCard from "./shared/SmallLineCard.vue";
 import IncomeCard from "./shared/IncomeCard.vue";
+import CreditBalanceCard from "./shared/CreditBalanceCard.vue";
+import {mapActions, mapGetters} from "vuex";
+import PaymentsPie from "./shared/Graphs/PaymentsPie.vue";
+import TotalCountTransactions from "./shared/TotalCountTransactions.vue";
+import TotalCountPayments from "./shared/TotalCountPayments.vue";
+import TotalCountDisputes from "./shared/TotalCountDisputes.vue";
+
 ChartJS.register(
     ArcElement,
     CategoryScale,
@@ -238,30 +274,65 @@ ChartJS.register(
 
 export default {
     name: "Home",
-    components: {IncomeCard, SmallLineCard, WithdrawlsCard, BalanceCard, TransactionGraph, SubHeader, Toast,Pie},
+    components: {
+        TotalCountDisputes,
+        TotalCountPayments,
+        TotalCountTransactions,
+        PaymentsPie,
+        CreditBalanceCard,
+        IncomeCard,
+        SmallLineCard,
+        WithdrawlsCard,
+        BalanceCard,
+        TransactionGraph,
+        SubHeader,
+        Toast,
+        Pie
+    },
     data() {
         return {
             labels: ['VueJs', 'EmberJs'],
-            data : {
+            data: {
 
                 datasets: [
                     {
                         backgroundColor: ['#41B883', '#E46651'],
-                        data: [ 80, 20]
+                        data: [80, 20]
                     }
                 ]
             },
-            options : {
+            options: {
                 responsive: true,
                 maintainAspectRatio: false
             },
             drawer: true,
-            list_items:[
+            list_items: [
                 'Сутки', '7 суток', '30 суток', '365 суток', 'За все время'
-            ]
+            ],
+            isManager: false
         }
     },
-    methods: {}
+    computed: {
+        ...mapGetters([
+            'GET_MY_BALANCE_RUB',
+        ]),
+        ...mapGetters([
+            'GET_MY_CREDIT_BALANCE_RUB',
+        ]),
+    },
+    methods: {
+        ...mapActions([
+            'GET_MY_BALANCE_FROM_API',
+        ]),
+        ...mapActions([
+            'GET_MY_CREDIT_BALANCE_FROM_API',
+        ]),
+    },
+    mounted() {
+        this.isManager = this.$store.state.user.role_names.includes('Менеджер');
+        this.GET_MY_BALANCE_FROM_API.call()
+        this.GET_MY_CREDIT_BALANCE_FROM_API.call()
+    }
 }
 </script>
 

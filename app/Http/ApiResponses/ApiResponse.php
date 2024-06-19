@@ -38,9 +38,10 @@ abstract class ApiResponse implements Responsable
     /** @var array|null Response payload */
     protected ?array $payload = [];
 
-    public function __construct(array $headers = [])
+    public function __construct(array $headers = [], array $payload = [])
     {
         $this->headers = $headers;
+        $this->payload = $payload;
     }
 
     /**
@@ -236,9 +237,9 @@ abstract class ApiResponse implements Responsable
      *
      * @return  ApiResponseList
      */
-    public static function list(array $headers = []): ApiResponseList
+    public static function list(array $headers = [], array $payload = []): ApiResponseList
     {
-        return new ApiResponseList($headers);
+        return new ApiResponseList($headers, $payload);
     }
 
     /**

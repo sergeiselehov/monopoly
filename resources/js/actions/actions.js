@@ -68,7 +68,7 @@ export default {
     },
 
     async GET_MY_BALANCE_FROM_API({commit}){
-        let dataPromise = await axios.get('/api/v1/balance')
+        let dataPromise = await axios.get('/api/v1/balance-info')
             .then(
                 (response) => response.data
             );
@@ -84,6 +84,14 @@ export default {
             );
         await commit('MY_WITHDRAWALS_SUM', dataPromise.data)
         return dataPromise
-    }
+    },
 
+    async GET_MY_CREDIT_BALANCE_FROM_API({commit}){
+        let dataPromise = await axios.get('/api/v1/credit-balance-info')
+            .then(
+                (response) => response.data
+            );
+        await commit('MY_CREDIT_BALANCE_RUB', dataPromise.data.balance)
+        return dataPromise
+    },
 }

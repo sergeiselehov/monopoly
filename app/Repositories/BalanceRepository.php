@@ -1,0 +1,218 @@
+<?php
+
+namespace App\Repositories;
+
+
+use App\Http\ApiRequests\ApiRequest;
+use App\Models\Payment;
+use App\Models\User;
+use App\Models\WithdrawalStatus;
+use Carbon\Carbon;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\JoinClause;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class BalanceRepository
+{
+
+    const DAY = 'day';
+    const WEEK = 'week';
+    const MONTH = 'month';
+    const YEAR = 'year';
+
+
+    public function getCurrentBalance(User $user){
+        $total_balance_result = DB::table('payments')
+            ->leftJoin('merchants','merchants.id','=','payments.merchant_id')
+            ->leftJoin('users','users.id','=','merchants.user_id')
+            ->where('users.id','=',$user->id)
+            ->select(DB::raw('
+                SUM(payments.amount_balance) as sum_rub,
+                SUM(payments.usdt_paid_balance) as sum_usdt
+                '
+            ))
+            ->get()
+        ;
+
+        $withdrawals = DB::table('withdrawals')
+            ->select(DB::raw('
+                SUM(withdrawals.amount_paid) as sum_amount_rub,
+                SUM(withdrawals.amount_usdt_paid) as sum_amount_usdt
+                ',
+            ))
+            ->where('withdrawals.user_id','=',$user->id)
+            ->where('withdrawals.status','=',WithdrawalStatus::PAID)
+            ->get()
+        ;
+
+        return $this->countCurrentBalance($total_balance_result,$withdrawals);
+    }
+
+    public function countCurrentBalance($total_balance_result, $withdrawals)
+    {
+        $balance_rub = $total_balance_result[0]?->sum_rub - $withdrawals[0]?->sum_amount_rub;
+        $balance_usdt = round(($total_balance_result[0]?->sum_usdt - $withdrawals[0]?->sum_amount_usdt),2);
+        return ['balance_rub'=>$balance_rub,'balance_usdt'=>$balance_usdt];
+    }
+
+
+
+    public function getMessagesList(array $communityIds, $request): Builder
+    {
+        return $this->queryMessages($communityIds, $request);
+    }
+
+
+    public function getListForFile(array $communityIds, $request): Builder
+    {
+        $builder = $this->queryMessages($communityIds, $request);
+        $builder->orderBy('count_messages', 'DESC');
+        return $builder;
+    }
+
+    public function getBalanceChart(ApiMessageStatisticChartRequest $request)
+    {
+
+        $scale = $this->getScale($request->input('period'));
+        $start = $this->getStartDate($request->input('period') ?? 'week')->toDateTimeString();
+        $end = $this->getEndDate()->toDateTimeString();
+
+        $tm = 'telegram_messages';
+        $tc = 'telegram_connections';
+        $com = 'communities';
+
+        DB::statement("SET TIMEZONE TO 'Europe/Moscow'");
+        $sub = DB::table(DB::raw("generate_series('$start'::timestamp, '$end'::timestamp, '$scale'::interval) as d(dt)"))
+            ->leftJoin($tm, function (JoinClause $join) use ($tm, $scale) {
+                $join->on(DB::raw(" to_timestamp($tm.message_date)"), '>=', 'd.dt')
+                    ->on(DB::raw(" to_timestamp($tm.message_date)"), '<', DB::raw("(d.dt + '$scale'::interval)"));
+            })
+            ->select([
+                DB::raw("d.dt"),
+                DB::raw("COUNT(distinct($tm.message_id)) as messages"),
+            ]);
+        $sub->join('telegram_connections', function (JoinClause $join) use ($tm) {
+            $join->on("$tm.group_chat_id", '=', 'telegram_connections.chat_id')
+                ->on("$tm.group_chat_id", '=', 'telegram_connections.comment_chat_id', 'OR');
+        })
+            ->join('communities', 'communities.connection_id', "=", "telegram_connections.id");
+
+        $sub->groupBy("d.dt");
+        if (!empty($request->input('community_ids'))) {
+            $sub->whereIn('communities.id', $request->input('community_ids'));
+        }
+        if (!empty($request->input('telegram_users_id'))) {
+            $sub->whereIn('telegram_messages.telegram_user_id', $request->input('telegram_users_id'));
+        }
+        $sub->where('communities.owner', Auth::user()->id);
+        $builder = DB::table(DB::raw("generate_series('$start'::timestamp, '$end'::timestamp, '$scale'::interval) as d1(dt)"))
+            ->leftJoin(DB::raw("({$sub->toSql()}) as sub"), 'sub.dt', '=', 'd1.dt')
+            ->select([
+                DB::raw("d1.dt as scale"),
+                DB::raw("CAST(EXTRACT(epoch FROM d1.dt) AS INTEGER) as scale_unix"),
+                DB::raw("coalesce(sub.messages,0) as messages"),
+            ])
+            ->mergeBindings($sub)
+            ->orderBy('scale')
+            ->orderBy('scale_unix');
+
+        return $builder->get();
+    }
+
+    /**
+     * @param array $communityIds
+     * @param TeleMessagesFilter $filter
+     * @return \Illuminate\Database\Eloquent\Builder|Builder
+     * @throws \Exception
+     */
+    protected function queryMessages(array $communityIds, $request)
+    {
+        $start = $this->getStartDate($request->input('period') ?? 'week')->toDateTimeString();
+        $end = $this->getEndDate()->toDateTimeString();
+
+        $tc = 'telegram_connections';
+        $tm = 'telegram_messages';
+        $tu = 'telegram_users';
+        $com = 'communities';
+        $tmr = 'telegram_message_reactions';
+
+        $subQuery = DB::table($tm)
+            ->join('telegram_connections', function (JoinClause $join) use ($tm) {
+                $join->on("$tm.group_chat_id", '=', 'telegram_connections.chat_id')
+                    ->on("$tm.group_chat_id", '=', 'telegram_connections.comment_chat_id', 'OR');
+            })
+            ->join('communities', 'communities.connection_id', "=", "telegram_connections.id")
+            ->join($tu, "$tm.telegram_user_id", "=", "$tu.telegram_id")
+            ->select([
+                DB::raw("distinct($tm.telegram_user_id) as telegram_id"),
+                "$tm.group_chat_id",
+                "$tm.message_date",
+                "$tu.user_name as nick_name",
+                DB::raw("CONCAT ($tu.first_name,' ', $tu.last_name) as name"),
+                DB::raw("COUNT(distinct($tm.id)) as count_messages")
+            ])
+            ->groupBy(
+                "$tm.telegram_user_id",
+                "$tm.group_chat_id",
+                "$tm.message_date",
+                "$tu.first_name",
+                "$tu.last_name",
+                "$tu.user_name",
+            );
+        $subQuery->whereDate(DB::raw('telegram_messages.created_at'), '>=', $start);
+        $subQuery->whereDate(DB::raw('telegram_messages.created_at'), '<=', $end);
+        $subQuery->where('communities.owner', Auth::user()->id);
+        if (!empty($request->input('community_ids'))) {
+            $subQuery->whereIn('communities.id', $request->input('community_ids'));
+        }
+
+        return DB::query()
+            ->fromSub($subQuery, 'subquery')
+            ->select(
+                'subquery.telegram_id',
+                DB::raw('MIN(subquery.group_chat_id) as group_chat_id'),
+                DB::raw('MIN(subquery.message_date) as message_date'),
+                DB::raw('MIN(subquery.nick_name) as nick_name'),
+                DB::raw('MIN(subquery.name) as name'),
+                DB::raw("JSON_AGG(json_build_object('message_date', subquery.message_date)) AS messages")
+            )
+            ->groupBy('subquery.telegram_id');
+    }
+
+
+    public function getStartDate($value): ?Carbon
+    {
+        switch ($value) {
+            case self::DAY:
+                return $this->getEndDate()->startOfDay();
+            case self::WEEK:
+                return $this->getEndDate()->sub('6 days')->startOfDay();
+            case self::MONTH:
+                return $this->getEndDate()->sub('30 days')->startOfDay();
+            case self::YEAR:
+                return $this->getEndDate()->sub('11 months')->startOfMonth();
+        }
+        return null;
+    }
+
+    public function getEndDate(): Carbon
+    {
+        return Carbon::now();
+    }
+
+    public function getScale($period)
+    {
+        $value = $period ?? 'week';
+        switch ($value) {
+            case self::YEAR:
+                return "1 month";//в среднем месяц
+            case self::MONTH:
+                return "1 day";
+            case self::WEEK:
+            default:
+                return "4 hour";//день
+        }
+    }
+
+}

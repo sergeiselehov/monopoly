@@ -1,38 +1,38 @@
 <template>
-  <v-sheet class="profile">
-      <v-avatar color="info">
-          <v-icon icon="mdi-account-circle"></v-icon>
-      </v-avatar>
-      <v-container class="text">
-        <h4 class="name">Admin</h4>
-        <p class="email">User@mail.com</p>
-      </v-container>
-      <v-btn @click="open=!open" icon>
-          <v-icon v-if="open" icon="mdi-chevron-up"></v-icon>
-          <v-icon v-else icon="mdi-chevron-down"></v-icon>
-      </v-btn>
-      <v-sheet
-          color="dgreen"
-          class="mx-auto menu"
-          max-width="300"
-          v-if="open"
-      >
-          <v-list density="compact" nav :lines="false" class="list">
-              <v-list-item
-                  v-for="(item, i) in menu_items"
-                  :key="i"
-                  :value="item"
-                  :to="item.to"
-                  class="overflow-hidden"
-              >
-                  <template v-slot:prepend>
-                      <v-icon class="mr-2" :icon="item.icon"></v-icon>
-                      <v-list-item-title v-text="item.text"></v-list-item-title>
-                  </template>
-              </v-list-item>
-          </v-list>
-      </v-sheet>
-  </v-sheet>
+    <v-sheet class="profile">
+        <v-avatar color="info">
+            <v-icon icon="mdi-account-circle"></v-icon>
+        </v-avatar>
+        <v-container class="text">
+            <h4 class="name">{{ user.name }}</h4>
+            <p class="email">{{ user.email }}</p>
+        </v-container>
+        <v-btn @click="open=!open" icon>
+            <v-icon v-if="open" icon="mdi-chevron-up"></v-icon>
+            <v-icon v-else icon="mdi-chevron-down"></v-icon>
+        </v-btn>
+        <v-sheet
+            color="dgreen"
+            class="mx-auto menu"
+            max-width="300"
+            v-if="open"
+        >
+            <v-list density="compact" nav :lines="false" class="list">
+                <v-list-item
+                    v-for="(item, i) in menu_items"
+                    :key="i"
+                    :value="item"
+                    :to="item.to"
+                    class="overflow-hidden"
+                >
+                    <template v-slot:prepend>
+                        <v-icon class="mr-2" :icon="item.icon"></v-icon>
+                        <v-list-item-title v-text="item.text"></v-list-item-title>
+                    </template>
+                </v-list-item>
+            </v-list>
+        </v-sheet>
+    </v-sheet>
 </template>
 
 <script>
@@ -42,12 +42,38 @@ export default {
     data() {
         return {
             open: false,
-            menu_items:[
-                {to:'/account',rule:'account.view',icon:'mdi-account',text:'редактировать профиль',value:'account'},
-                {to:'/home',rule:'home.view',icon:'mdi-hexagon-outline',text:'мои обращения',value:'reports'},
-                {to:'/transactions',rule:'transaction.view',icon:'mdi-chart-timeline-variant',text:'полноэкранный режим',value:'fullscreen'},
-                {to:'/balance',rule:'balance.view',icon:'mdi-wallet',text:'выйти из системы',value:'exit'},
-            ]
+            menu_items: [
+                {
+                    to: '/account',
+                    rule: 'account.view',
+                    icon: 'mdi-account',
+                    text: 'Редактировать профиль',
+                    value: 'account'
+                },
+                {
+                    to: '/home',
+                    rule: 'home.view',
+                    icon: 'mdi-hexagon-outline',
+                    text: 'Мои обращения',
+                    value: 'reports'
+                },
+                {
+                    to: '/transactions',
+                    rule: 'transaction.view',
+                    icon: 'mdi-chart-timeline-variant',
+                    text: 'Полноэкранный режим',
+                    value: 'fullscreen'
+                },
+                {
+                    to: '/balance',
+                    rule: 'balance.view',
+                    icon: 'mdi-wallet',
+                    text: 'Выйти из системы',
+                    value: 'exit'
+                },
+            ],
+            user: this.$store.state.user
+
         }
     },
 }

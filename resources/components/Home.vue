@@ -330,8 +330,8 @@ export default {
     },
     mounted() {
         this.isManager = this.$store.state.user.role_names.includes('Менеджер');
-        this.GET_MY_BALANCE_FROM_API.call()
-        this.GET_MY_CREDIT_BALANCE_FROM_API.call()
+        this.GET_MY_BALANCE_FROM_API.call();
+        this.GET_MY_CREDIT_BALANCE_FROM_API.call();
     }
 }
 </script>

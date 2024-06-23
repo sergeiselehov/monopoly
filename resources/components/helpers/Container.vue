@@ -2,7 +2,6 @@
     <v-container
         fluid
         class="bg-primary"
-        style="background-color: #1A1D1F; height: 100dvh; overflow: visible; padding: 0"
     >
         <v-layout>
             <v-navigation-drawer
@@ -256,7 +255,11 @@ a:last-child {
 }
 
 .bg-primary {
-    background: url("/assets/img/bg-stamp.png") center center
+    background: url("/assets/img/bg-stamp.png") center center;
+    background-color: #0B5838;
+    height: 100dvh;
+    overflow: visible;
+    padding: 0;
 }
 
 </style>

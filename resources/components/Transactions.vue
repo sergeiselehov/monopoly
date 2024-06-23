@@ -38,7 +38,7 @@
                     </v-col>
                 </v-row>
                 <v-row>
-                    <v-col cols="12">
+                    <v-col lg="4" md="4" sm="6" cols="12">
                         <v-text-field
                             label="Идентификатор платежа"
                             variant="outlined"
@@ -52,6 +52,7 @@
                         lg="4"
                         md="4"
                         sm="5"
+                        cols="12"
                     >
                         <v-text-field
                             v-model="filter.date_from"
@@ -67,6 +68,7 @@
                         lg="4"
                         md="4"
                         sm="5"
+                        cols="12"
                     >
                         <v-text-field
                             v-model="filter.date_to"
@@ -82,6 +84,7 @@
                         lg="3"
                         md="3"
                         sm="5"
+                        cols="12"
                         class="d-flex flex justify-space-around"
                     >
                         <v-btn
@@ -216,7 +219,6 @@ import Pagination from "./helpers/Pagination.vue";
 import {vMaska} from "maska"
 import {saveAs} from 'file-saver';
 import LgToast from "./helpers/Toast.vue";
-
 
 export default {
     components: {

@@ -4,8 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\Currency;
 use App\Models\PaymentStatus;
-use App\Models\SupportRequestCategory;
-use App\Models\SupportRequestStatus;
 use App\Models\WithdrawalPaymentStatus;
 use App\Models\WithdrawalStatus;
 use Illuminate\Console\Command;
@@ -28,14 +26,7 @@ class FillVocabulary extends Command
      */
     protected $description = 'Command description';
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
-
-
-    private $permission_list =  [
+    private $permission_list = [
         "account.view",
         "user.view",
         "user.create",
@@ -82,46 +73,37 @@ class FillVocabulary extends Command
         "cards.losses-confirm"
     ];
 
-
-
-    public function handle()
+    public function handle(): int
     {
+        $this->updateStatuses(PaymentStatus::class);
+        $this->updateStatuses(WithdrawalStatus::class);
+        $this->updateStatuses(WithdrawalPaymentStatus::class);
+        $this->updateStatuses(Currency::class);
+        $this->updatePermissions();
 
-        $refl = new ReflectionClass(PaymentStatus::class);
-        $list_of_statuses = $refl->getConstants();
+        return Command::SUCCESS;
+    }
 
-        foreach ($list_of_statuses['NAMES'] as $key => $row) {
-            PaymentStatus::query()->updateOrCreate(['id' => $key], ['name' => $row['name'],'name_ru'=>$row['name_ru']]);
-        }
-
-        $refl = new ReflectionClass(WithdrawalStatus::class);
-        $list_of_statuses = $refl->getConstants();
-
-        foreach ($list_of_statuses['NAMES'] as $key => $row) {
-            WithdrawalStatus::query()->updateOrCreate(['id' => $key], ['name' => $row['name'],'name_ru'=>$row['name_ru']]);
-        }
-
-        $refl = new ReflectionClass(WithdrawalPaymentStatus::class);
-        $list_of_statuses = $refl->getConstants();
+    private function updateStatuses(string $className): void
+    {
+        $reflect = new ReflectionClass($className);
+        $list_of_statuses = $reflect->getConstants();
 
         foreach ($list_of_statuses['NAMES'] as $key => $row) {
-            WithdrawalPaymentStatus::query()->updateOrCreate(['id' => $key], ['name' => $row['name'],'name_ru'=>$row['name_ru']]);
+            $className::query()->updateOrCreate(
+                ['id' => $key],
+                ['name' => $row['name'], 'name_ru' => $row['name_ru']]
+            );
         }
+    }
 
-        $refl = new ReflectionClass(Currency::class);
-        $list_of_statuses = $refl->getConstants();
-
-        foreach ($list_of_statuses['NAMES'] as $key => $row) {
-            Currency::query()->updateOrCreate(['id' => $key], ['name' => $row['name'],'name_ru'=>$row['name_ru']]);
-        }
-
-        foreach($this->permission_list as $permission){
+    private function updatePermissions(): void
+    {
+        foreach ($this->permission_list as $permission) {
             Permission::updateOrCreate([
                 'name' => $permission,
                 'guard_name' => 'sanctum'
             ]);
         }
-
-        return Command::SUCCESS;
     }
 }
